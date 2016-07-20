@@ -1,91 +1,94 @@
-from microbit import Image, display, button_a, button_b, sleep
+import microbit
 import random
 
 
 # Delay in microseconds between cycles.
 CLOCK = 25
 
-# Initial state of the game.
-INIT_GAME = {
-    'row': 0,
-    'field': [[0] * 5] * 5,
-    'pos': 2,
-    'delay': 500,
-    'time': 0
-}
 
-state = ['init']
+class BaseHandler:
+    def __init__(self):
+        self.time = 0
+
+    def tick(self, time_passed):
+        self.time += time_passed
 
 
-def get_state(i, default=None):
-    if len(state) <= i:
-        return default
-    return state[i]
+class Init(BaseHandler):
+
+    def run(self, button_a=False, button_b=False):
+        if button_a:
+            return Game(), ''
+        if self.time % 1000 < 500:
+            return self, microbit.Image.ARROW_W
+        return self, microbit.Image.HAPPY
 
 
-def set_state(i, value):
-    filler = [None] * 5
-    state[:] = (state + filler)[:i] + [value]
+class Game(BaseHandler):
+    def __init__(self):
+        super().__init__()
+        self.row = 0
+        self.field = [[0] * 5] * 5
+        self.pos = 2
+        self.delay = 500
+        self.time = 0
+
+    def crashed(self):
+        return self.field[4][self.pos] != 0
+
+    def forward(self):
+        self.time = self.time % self.delay
+        self.row += 1
+        new_row = [0] * 5
+        if self.row % 2:
+            new_row[random.randint(0, 4)] = 5
+        self.field = [new_row] + self.field[:4]
+        self.delay -= self.delay // 50
+
+    def run(self, button_a=False, button_b=False):
+        if self.crashed():
+            return EndGame(self.row), None
+
+        if button_a:
+            self.pos = max(0, self.pos - 1)
+        if button_b:
+            self.pos = min(4, self.pos + 1)
+
+        if self.time >= self.delay:
+            self.forward()
+
+        frame_buffer = [[x for x in row] for row in self.field]
+        frame_buffer[4][self.pos] = 9
+        screen = microbit.Image(':'.join(''.join(map(str, row))
+                                         for row in frame_buffer))
+        return self, screen
 
 
-while True:
-    sleep(CLOCK)
+class EndGame(BaseHandler):
+    def __init__(self, score):
+        super().__init__()
+        self.score = score
+        self.showing_score = False
 
-    if get_state(0) == 'init':
-        i = get_state(1, 0)
-        if i < 500 / CLOCK:
-            display.show(Image.HAPPY)
-        else:
-            display.show(Image.ARROW_W)
-        set_state(1, (i + 1) % (1000 / CLOCK))
-        if button_a.was_pressed():
-            set_state(0, 'game')
+    def run(self, button_a=False, button_b=False):
+        if self.time > 1000 and not self.showing_score:
+            self.showing_score = True
+            return self, 'score {}'.format(self.score)
+        if button_a:
+            return Game(), None
+        return self, None
 
-    elif get_state(0) == 'game':
-        game = get_state(1, INIT_GAME)
 
-        # Check for collisions.
-        if game['field'][4][game['pos']]:
-            score = game['row']
-            set_state(0, 'crashed')
-            set_state(1, score)
-            button_a.was_pressed()  # Reset the button press flag.
-            continue
-
-        # Handle controls.
-        if button_a.was_pressed():
-            game['pos'] = max(0, game['pos'] - 1)
-        if button_b.was_pressed():
-            game['pos'] = min(4, game['pos'] + 1)
-
-        # Move the field if needed.
-        game['time'] += CLOCK
-        if game['time'] > game['delay']:
-            game['time'] = 0
-            game['row'] += 1
-            new_row = [0] * 5
-            if game['row'] % 2:
-                new_row[random.randint(0, 4)] = 5
-            game['field'] = [new_row] + game['field'][:4]
-            game['delay'] -= game['delay'] / 50
-
-        # Redraw field
-        frame_buffer = [[x for x in row] for row in game['field']]
-        frame_buffer[4][game['pos']] = 9
-        screen = Image(':'.join(''.join(map(str, row))
-                                for row in frame_buffer))
-        display.show(screen)
-
-    elif get_state(0) == 'crashed':
-        if button_a.was_pressed():
-            score = get_state(1)
-            set_state(0, 'score')
-            set_state(1, score)
-
-    elif get_state(0) == 'score':
-        score = get_state(1)
-        if score:
-            display.scroll('score: {}'.format(score), wait=False, loop=True)
-            set_state(1, 0)
-        if button_a.was_pressed():
-            set_state(0, 'init')
+if __name__ == '__main__':
+    handler = Init()
+    while True:
+        microbit.sleep(CLOCK)
+        handler.tick(CLOCK)
+        handler, output = handler.run(
+            button_a=microbit.button_a.was_pressed(),
+            button_b=microbit.button_b.was_pressed(),
+        )
+        if isinstance(output, microbit.Image):
+            microbit.display.show(output)
+        elif isinstance(output, str):
+            microbit.display.scroll(output, wait=False, loop=True)
