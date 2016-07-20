@@ -1,8 +1,6 @@
 # Microbitm module mock.
 
-
-def sleep(millis):
-    pass
+import mock
 
 
 class Image:
@@ -12,3 +10,7 @@ class Image:
 
 Image.HAPPY = Image('happy')
 Image.ARROW_W = Image('arrow_w')
+
+
+accelerometer = mock.MagicMock()
+sleep = mock.MagicMock()
