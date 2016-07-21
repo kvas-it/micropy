@@ -4,29 +4,34 @@ import pytest
 
 @pytest.fixture(scope='function')
 def gol():
-    data = [[0, 0, 0, 1, 0],
-            [0, 1, 0, 0, 0],
-            [0, 0, 1, 1, 0],
-            [0, 0, 0, 1, 0],
-            [0, 0, 1, 1, 1]]
-    return life.GameOfLife(data)
+    data = [0b00010,
+            0b01000,
+            0b00110,
+            0b00010,
+            0b00111]
+    return life.GameOfLife(size=5, data=data)
 
 
-def test_neighbour_counts(gol):
-    expect = [[2, 2, 4, 3, 3],
-              [1, 1, 4, 3, 2],
-              [1, 2, 3, 2, 2],
-              [1, 2, 5, 5, 4],
-              [1, 1, 3, 4, 3]]
-    assert gol.neighbour_counts() == expect
+def test_get_pixel(gol):
+    assert not gol.get_pixel(0, 0)
+    assert gol.get_pixel(1, 1)
+    assert gol.get_pixel(-1, -1)
+    assert not gol.get_pixel(-1, -2)
+
+
+def test_set_pixel(gol):
+    gol.set_pixel(0, 0, 1)
+    assert gol.get_pixel(0, 0)
+    gol.set_pixel(0, 0, 0)
+    assert not gol.get_pixel(0, 0)
 
 
 def test_step(gol):
-    expect = [[0, 0, 0, 1, 1],
-              [0, 0, 0, 1, 0],
-              [0, 0, 1, 1, 0],
-              [0, 0, 0, 0, 0],
-              [0, 0, 1, 0, 1]]
+    expect = [0b00011,
+              0b00010,
+              0b00110,
+              0b00000,
+              0b00101]
     gol.step()
     assert gol.data == expect
 
@@ -45,5 +50,11 @@ def test_image(gol):
 
 def is_alive(gol):
     assert gol.is_alive()
-    gol.data = [[0] * 5] * 5
+    gol.data = [0] * 5
     assert not gol.is_alive()
+
+
+def test_randomize(gol):
+    gol.randomize(20)
+    assert gol.is_alive()
+    gol.step()
