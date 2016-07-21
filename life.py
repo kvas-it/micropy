@@ -85,32 +85,30 @@ class GameOfLife:
 
 SIZE = 24
 CLOCK = 20
-STEP = 300
+SCROLL_DELAY = 700
 
 while __name__ == '__main__':
     game = GameOfLife(size=SIZE)
     time = 0
-    step = STEP
+    scrolling = False
 
     while True:
         changed = False
         microbit.sleep(CLOCK)
         time += CLOCK
-        if time >= step:
+        if not scrolling:
             game.step()
-            time %= step
             changed = True
             if not game.is_alive():
                 break
         if microbit.button_a.was_pressed():  # Pause/resume.
-            if step == STEP:
-                step = 100000000
-            else:
-                step = STEP
-        if microbit.button_b.was_pressed():  # Move according to tilt.
-            acc_x = max(-1, min(1, microbit.accelerometer.get_x() // 400))
-            acc_y = max(-1, min(1, microbit.accelerometer.get_y() // 400))
+            scrolling = True
+            time = 0
+            acc_x = max(-1, min(1, microbit.accelerometer.get_x() // 500))
+            acc_y = max(-1, min(1, microbit.accelerometer.get_y() // 500))
             game.move(acc_x, acc_y)
             changed = True
+        if time > SCROLL_DELAY:
+            scrolling = False
         if changed:
             microbit.display.show(game.gen_image())
