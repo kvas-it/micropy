@@ -60,7 +60,7 @@ class GameOfLife:
                     nxt[x] += 1
                     nxt[nx] += 1
             if prv:
-                self.update_row(y - 1, prv) 
+                self.update_row(y - 1, prv)
             prv, cur, nxt = cur, nxt, [0] * self.size
             if y == self.size:
                 first_line, self.data[0] = self.data[0], first_line
@@ -93,14 +93,15 @@ while __name__ == '__main__':
     step = STEP
 
     while True:
+        changed = False
         microbit.sleep(CLOCK)
         time += CLOCK
         if time >= step:
             game.step()
             time %= step
+            changed = True
             if not game.is_alive():
                 break
-        microbit.display.show(game.gen_image())
         if microbit.button_a.was_pressed():  # Pause/resume.
             if step == STEP:
                 step = 100000000
@@ -110,3 +111,6 @@ while __name__ == '__main__':
             acc_x = max(-1, min(1, microbit.accelerometer.get_x() // 400))
             acc_y = max(-1, min(1, microbit.accelerometer.get_y() // 400))
             game.move(acc_x, acc_y)
+            changed = True
+        if changed:
+            microbit.display.show(game.gen_image())

@@ -71,11 +71,12 @@ class EndGame(BaseHandler):
         self.showing_score = False
 
     def run(self, button_a=False, button_b=False):
-        if self.time > 1000 and not self.showing_score:
-            self.showing_score = True
-            return self, 'score {}'.format(self.score)
-        if button_a:
-            return Game(), None
+        if self.time > 1000:
+            if button_a:
+                return Game(), None
+            if not self.showing_score:
+                self.showing_score = True
+                return self, 'score {}'.format(self.score)
         return self, None
 
 

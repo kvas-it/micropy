@@ -107,4 +107,7 @@ def test_endgame(endgame):
 
 def test_endgame_button(endgame):
     h, o = endgame.run(button_a=True)
+    assert h is endgame
+    endgame.tick(1001)
+    h, o = endgame.run(button_a=True)
     assert isinstance(h, race.Game)
